@@ -1,0 +1,14 @@
+<%- include('partials/header', { title: 'Health' }) %>
+
+  <h2>Requestor Health</h2>
+  
+  <div class="alert <%= health.status === 'error' ? 'alert-error' : 'alert-success' %>">
+    <strong>Status:</strong>
+    <pre><%= JSON.stringify(health, null, 2) %></pre>
+  </div>
+
+  <div style="margin-top: 2rem;">
+    <a href="/request/new">&larr; Back to Create Notification</a>
+  </div>
+
+<%- include('partials/footer') %>

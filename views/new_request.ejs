@@ -1,0 +1,126 @@
+<%- include('partials/header', { title: 'Create Notification' }) %>
+
+  <h2>Create Notification</h2>
+
+  <% if (errors) { %>
+    <div class="alert alert-error">
+      <strong>Error:</strong>
+      <pre><%= JSON.stringify(errors, null, 2) %></pre>
+    </div>
+  <% } %>
+
+  <% if (result) { %>
+    <div class="alert alert-success">
+      <strong>Queued Successfully!</strong>
+      <pre><%= JSON.stringify(result, null, 2) %></pre>
+    </div>
+  <% } %>
+
+  <form method="POST" action="/request">
+    <div>
+      <label for="Application">Application</label>
+      <input type="text" id="Application" name="Application" value="<%= form.Application || '' %>" required placeholder="e.g. MyService" />
+    </div>
+
+    <div>
+      <label for="Recipient">Recipient</label>
+      <input type="text" id="Recipient" name="Recipient" value="<%= form.Recipient || '' %>" required placeholder="User ID or Name" />
+    </div>
+
+    <div>
+      <label for="Subject">Subject</label>
+      <input type="text" id="Subject" name="Subject" value="<%= form.Subject || '' %>" placeholder="Notification Subject" />
+    </div>
+
+    <div>
+      <label for="Message">Message</label>
+      <textarea id="Message" name="Message" required placeholder="Enter your message here..."><%= form.Message || '' %></textarea>
+    </div>
+
+    <div>
+      <label for="OutputType">Output Type</label>
+      <select id="OutputType" name="OutputType" required>
+        <option value="SMS" <%= form.OutputType === 'SMS' ? 'selected' : '' %>>SMS</option>
+        <option value="EMAIL" <%= form.OutputType === 'EMAIL' ? 'selected' : '' %>>EMAIL</option>
+        <option value="PUSH" <%= form.OutputType === 'PUSH' ? 'selected' : '' %>>PUSH</option>
+      </select>
+    </div>
+
+    <div class="form-section">
+      <h3>Scheduling (Optional)</h3>
+      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+        <div style="flex: 1;">
+          <label for="Date">Date</label>
+          <input type="date" id="Date" name="Date" value="<%= form.Date || '' %>" />
+        </div>
+        <div style="flex: 1;">
+          <label for="Time">Time</label>
+          <input type="time" id="Time" name="Time" value="<%= form.Time || '' %>" />
+        </div>
+      </div>
+    
+      <h3>Interval</h3>
+      <div class="checkbox-field" style="margin-bottom: 1rem;">
+        <input type="checkbox" id="Once" name="Once" <%= form.Once ? 'checked' : '' %> />
+        <label for="Once">One-time only</label>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+        <div>
+          <label for="Days">Days (1–31)</label>
+          <select id="Days" name="Days" multiple>
+            <% for (let i=1; i<=31; i++) { %>
+              <option value="<%= i %>"><%= i %></option>
+            <% } %>
+          </select>
+        </div>
+        <div>
+          <label for="Weeks">Weeks (1–52)</label>
+          <select id="Weeks" name="Weeks" multiple>
+            <% for (let i=1; i<=52; i++) { %>
+              <option value="<%= i %>"><%= i %></option>
+            <% } %>
+          </select>
+        </div>
+        <div>
+          <label for="Months">Months (1–12)</label>
+          <select id="Months" name="Months" multiple>
+            <% for (let i=1; i<=12; i++) { %>
+              <option value="<%= i %>"><%= i %></option>
+            <% } %>
+          </select>
+        </div>
+        <div>
+          <label for="Years">Years (1970–2100)</label>
+          <select id="Years" name="Years" multiple>
+            <% for (let i=1970; i<=2100; i++) { %>
+              <option value="<%= i %>"><%= i %></option>
+            <% } %>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Delivery Target</h3>
+
+      <div>
+        <label for="PhoneNumber">Phone Number (for SMS)</label>
+        <input type="text" id="PhoneNumber" name="PhoneNumber" value="<%= form.PhoneNumber || '' %>" placeholder="+1234567890" />
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <label for="EmailAddresses">Email Addresses (comma separated)</label>
+        <input type="text" id="EmailAddresses" name="EmailAddresses" value="<%= form.EmailAddresses || '' %>" placeholder="user@example.com, other@example.com" />
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <label for="PushToken">Push Token (for PUSH)</label>
+        <input type="text" id="PushToken" name="PushToken" value="<%= form.PushToken || '' %>" />
+      </div>
+    </div>
+
+    <button type="submit">Send Notification</button>
+  </form>
+
+<%- include('partials/footer') %>
