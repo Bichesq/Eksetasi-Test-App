@@ -70,16 +70,22 @@ app.post('/request', async (req, res) => {
 
     console.log('Converted Payload:', JSON.stringify(body, null, 2));
 
+    const apiKey = req.body.ApiKey || API_KEY;
+
     const sendRequest = async (token) => {
       const headers = {
         'Content-Type': 'application/json',
       };
-      if (API_KEY) {
-        headers['X-API-Key'] = API_KEY;
+      if (apiKey) {
+        headers['X-API-Key'] = apiKey;
       }
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+        console.log('>>> Adding JWT to Authorization header');
+      } else {
+        console.log('>>> No JWT available for this request (using API Key only)');
       }
+      console.log('>>> Request Headers:', JSON.stringify(headers, null, 2));
       return await axios.post(`${REQUESTOR_BASE_URL}/request`, body, { headers });
     };
 
@@ -87,28 +93,39 @@ app.post('/request', async (req, res) => {
     try {
       // First attempt with current token (if any) and API key
       r = await sendRequest(backendJwtToken);
+      
+      // Check for token upgrade in successful response
+      if (r.data && r.data.access_token) {
+        console.log('<<< New JWT token received in response. Updating stored token.');
+        backendJwtToken = r.data.access_token;
+      } else {
+        console.log('<<< No new JWT token in response.');
+      }
+      
     } catch (err) {
-      // Check if unauthorized and we might have received a token to upgrade
-      if (err.response && (err.response.status === 401 || err.response.status === 403)) {
-        console.log('Received 401/403 - checking for JWT token update...');
-        
-        // Look for token in response headers or body
-        // Adjust these paths based on actual backend behavior
-        const newToken = err.response.headers['x-jwt-token'] || 
-                       err.response.data?.token || 
-                       err.response.data?.jwt;
-
-        if (newToken) {
-          console.log('New JWT token found. Retrying request...');
-          backendJwtToken = newToken;
-          // Retry with new token
-          r = await sendRequest(backendJwtToken);
-        } else {
-          // No token found, rethrow existing error
-          throw err;
+      // If error is 401 (Unauthorized) and we had a token, try one more time without the token (using API key)
+      if (err.response && err.response.status === 401 && backendJwtToken) {
+        console.log('401 Unauthorized received. Token might be expired. Retrying with API Key...');
+        backendJwtToken = null; // Clear invalid token
+        try {
+           r = await sendRequest(null);
+           // If successful, update token if new one provided
+           if (r.data && r.data.access_token) {
+             console.log('Retry successful. New JWT token received.');
+             backendJwtToken = r.data.access_token;
+           }
+        } catch (retryErr) {
+           // If retry fails, throw the original error or the new one
+           console.error('Retry failed:', retryErr.message);
+           throw retryErr;
         }
       } else {
-        // Not an auth error we can handle, rethrow
+        // Not a 401 or no token usage, just throw
+        // Check if we might have received a token in the error response (edge case)
+        if (err.response && err.response.data && err.response.data.access_token) {
+             console.log('JWT token found in error response (unusual but handled).');
+             backendJwtToken = err.response.data.access_token;
+        }
         throw err;
       }
     }

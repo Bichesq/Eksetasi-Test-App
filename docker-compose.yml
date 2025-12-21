@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  app:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      REQUESTOR_BASE_URL: "http://backend:8000"
+      # API_KEY: ${API_KEY}
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "8000:8000"
+    environment:
+      # API_KEY: ${API_KEY}
+    restart: unless-stopped
+

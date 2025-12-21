@@ -18,6 +18,11 @@
 
   <form method="POST" action="/request">
     <div>
+      <label for="ApiKey">API Key </label>
+      <input type="password" id="ApiKey" name="ApiKey" value="<%= form.ApiKey || '' %>" placeholder="leave empty to use env API_KEY" />
+    </div>
+
+    <div>
       <label for="Application">Application</label>
       <input type="text" id="Application" name="Application" value="<%= form.Application || '' %>" required placeholder="e.g. MyService" />
     </div>
