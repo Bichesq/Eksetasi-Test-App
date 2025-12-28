@@ -49,74 +49,81 @@
     </div>
 
     <div class="form-section">
-      <h3>Scheduling (Optional)</h3>
-      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-        <div style="flex: 1;">
-          <label for="Date">Date</label>
-          <input type="date" id="Date" name="Date" value="<%= form.Date || '' %>" />
-        </div>
-        <div style="flex: 1;">
-          <label for="Time">Time</label>
-          <input type="time" id="Time" name="Time" value="<%= form.Time || '' %>" />
-        </div>
-      </div>
-    
-      <h3>Interval</h3>
       <div class="checkbox-field" style="margin-bottom: 1rem;">
-        <input type="checkbox" id="Once" name="Once" <%= form.Once ? 'checked' : '' %> />
-        <label for="Once">One-time only</label>
+         <input type="checkbox" id="ScheduleNotification" name="ScheduleNotification" onchange="toggleScheduling()" />
+         <label for="ScheduleNotification"><strong>Schedule Notification</strong></label>
       </div>
 
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
-        <div>
-          <label for="Days">Days (1–31)</label>
-          <select id="Days" name="Days" multiple>
-            <% for (let i=1; i<=31; i++) { %>
-              <option value="<%= i %>"><%= i %></option>
-            <% } %>
-          </select>
-        </div>
-        <div>
-          <label for="Weeks">Weeks (1–52)</label>
-          <select id="Weeks" name="Weeks" multiple>
-            <% for (let i=1; i<=52; i++) { %>
-              <option value="<%= i %>"><%= i %></option>
-            <% } %>
-          </select>
-        </div>
-        <div>
-          <label for="Months">Months (1–12)</label>
-          <select id="Months" name="Months" multiple>
-            <% for (let i=1; i<=12; i++) { %>
-              <option value="<%= i %>"><%= i %></option>
-            <% } %>
-          </select>
-        </div>
-        <div>
-          <label for="Years">Years (1970–2100)</label>
-          <select id="Years" name="Years" multiple>
-            <% for (let i=1970; i<=2100; i++) { %>
-              <option value="<%= i %>"><%= i %></option>
-            <% } %>
-          </select>
-        </div>
+      <div id="SchedulingSection" style="display: none;">
+          <h3>Scheduling Details</h3>
+          <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <div style="flex: 1;">
+              <label for="Date">Date</label>
+              <input type="date" id="Date" name="Date" value="<%= form.Date || '' %>" />
+            </div>
+            <div style="flex: 1;">
+              <label for="Time">Time</label>
+              <input type="time" id="Time" name="Time" value="<%= form.Time || '' %>" />
+            </div>
+          </div>
+        
+          <h3>Interval</h3>
+          <div class="checkbox-field" style="margin-bottom: 1rem;">
+            <input type="checkbox" id="Once" name="Once" <%= form.Once ? 'checked' : '' %> />
+            <label for="Once">One-time only</label>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+            <div>
+              <label for="Days">Days (1–31)</label>
+              <select id="Days" name="Days" multiple>
+                <% for (let i=1; i<=31; i++) { %>
+                  <option value="<%= i %>"><%= i %></option>
+                <% } %>
+              </select>
+            </div>
+            <div>
+              <label for="Weeks">Weeks (1–52)</label>
+              <select id="Weeks" name="Weeks" multiple>
+                <% for (let i=1; i<=52; i++) { %>
+                  <option value="<%= i %>"><%= i %></option>
+                <% } %>
+              </select>
+            </div>
+            <div>
+              <label for="Months">Months (1–12)</label>
+              <select id="Months" name="Months" multiple>
+                <% for (let i=1; i<=12; i++) { %>
+                  <option value="<%= i %>"><%= i %></option>
+                <% } %>
+              </select>
+            </div>
+            <div>
+              <label for="Years">Years (1970–2100)</label>
+              <select id="Years" name="Years" multiple>
+                <% for (let i=1970; i<=2100; i++) { %>
+                  <option value="<%= i %>"><%= i %></option>
+                <% } %>
+              </select>
+            </div>
+          </div>
       </div>
     </div>
 
     <div class="form-section">
       <h3>Delivery Target</h3>
 
-      <div>
+      <div id="SMSFields" class="delivery-field" style="display:none;">
         <label for="PhoneNumber">Phone Number (for SMS)</label>
         <input type="text" id="PhoneNumber" name="PhoneNumber" value="<%= form.PhoneNumber || '' %>" placeholder="+1234567890" />
       </div>
 
-      <div style="margin-top: 1rem;">
+      <div id="EMAILFields" class="delivery-field" style="display:none;">
         <label for="EmailAddresses">Email Addresses (comma separated)</label>
         <input type="text" id="EmailAddresses" name="EmailAddresses" value="<%= form.EmailAddresses || '' %>" placeholder="user@example.com, other@example.com" />
       </div>
 
-      <div style="margin-top: 1rem;">
+      <div id="PUSHFields" class="delivery-field" style="display:none;">
         <label for="PushToken">Push Token (for PUSH)</label>
         <input type="text" id="PushToken" name="PushToken" value="<%= form.PushToken || '' %>" />
       </div>
@@ -124,5 +131,39 @@
 
     <button type="submit">Send Notification</button>
   </form>
+
+<script>
+    function toggleScheduling() {
+        const isChecked = document.getElementById('ScheduleNotification').checked;
+        document.getElementById('SchedulingSection').style.display = isChecked ? 'block' : 'none';
+    }
+
+    function updateDeliveryFields() {
+        const outputType = document.getElementById('OutputType').value;
+        
+        // Hide all first
+        document.querySelectorAll('.delivery-field').forEach(el => el.style.display = 'none');
+        document.getElementById('PhoneNumber').required = false;
+        document.getElementById('EmailAddresses').required = false;
+        document.getElementById('PushToken').required = false;
+
+        if (outputType === 'SMS') {
+            document.getElementById('SMSFields').style.display = 'block';
+            document.getElementById('PhoneNumber').required = true;
+        } else if (outputType === 'EMAIL') {
+            document.getElementById('EMAILFields').style.display = 'block';
+            document.getElementById('EmailAddresses').required = true;
+        } else if (outputType === 'PUSH') {
+            document.getElementById('PUSHFields').style.display = 'block';
+            document.getElementById('PushToken').required = true;
+        }
+    }
+
+    // Attach listener
+    document.getElementById('OutputType').addEventListener('change', updateDeliveryFields);
+
+    // Initial run
+    updateDeliveryFields();
+</script>
 
 <%- include('partials/footer') %>

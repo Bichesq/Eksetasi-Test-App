@@ -3,6 +3,8 @@ const express = require('express');
 const path = require('path');
 const axios = require('axios');
 
+const cookieParser = require('cookie-parser');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -10,18 +12,65 @@ const PORT = process.env.PORT || 3000;
 const REQUESTOR_BASE_URL = process.env.REQUESTOR_BASE_URL || 'http://localhost:8000';
 const API_KEY = process.env.API_KEY;
 
-// Store JWT token in memory
-let backendJwtToken = null;
-
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cookieParser());
+
+// Check auth middleware
+const requireAuth = (req, res, next) => {
+    // Check if token exists in cookie
+    if (!req.cookies.token) {
+        return res.redirect('/signin');
+    }
+    next();
+};
 
 app.get('/', (req, res) => {
-  res.redirect('/request/new');
+  if (req.cookies.token) {
+      res.redirect('/request/new');
+  } else {
+      res.redirect('/signin');
+  }
+});
+
+// Sign In Routes
+app.get('/signin', (req, res) => {
+    res.render('signin', { error: null, form: {}, apiKey: API_KEY });
+});
+
+app.post('/signin', async (req, res) => {
+    try {
+        const { username, password, apiKey } = req.body;
+        
+        console.log(`Authenticating user: ${username}`);
+        
+        const r = await axios.post(`${REQUESTOR_BASE_URL}/auth`, { 
+            username, 
+            password, 
+            apiKey: apiKey || API_KEY
+        });
+        
+        const token = r.data.access_token;
+        console.log('Authentication successful, token received');
+        
+        // Store token in HTTP-only cookie
+        res.cookie('token', token, { 
+            httpOnly: true, 
+            maxAge: 3600000,
+            secure: process.env.NODE_ENV === 'production'
+        });
+        
+        res.redirect('/request/new');
+        
+    } catch (err) {
+        console.error('Login failed:', err.message);
+        const detail = err.response?.data?.detail || err.message;
+        res.render('signin', { error: detail, form: req.body, apiKey: req.body.apiKey });
+    }
 });
 
 // health check
@@ -34,13 +83,13 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// show new notification form
-app.get('/request/new', (req, res) => {
+// show new notification form (protected)
+app.get('/request/new', requireAuth, (req, res) => {
   res.render('new_request', { errors: null, result: null, form: {} });
 });
 
 // handle submission
-app.post('/request', async (req, res) => {
+app.post('/request', requireAuth, async (req, res) => {
   console.log('--- Incoming Request ---');
   console.log('Form Body:', req.body);
 
@@ -71,70 +120,33 @@ app.post('/request', async (req, res) => {
     console.log('Converted Payload:', JSON.stringify(body, null, 2));
 
     const apiKey = req.body.ApiKey || API_KEY;
+    const token = req.cookies.token; // Get token from cookie
 
-    const sendRequest = async (token) => {
-      const headers = {
+    const headers = {
         'Content-Type': 'application/json',
-      };
-      if (apiKey) {
-        headers['X-API-Key'] = apiKey;
-      }
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-        console.log('>>> Adding JWT to Authorization header');
-      } else {
-        console.log('>>> No JWT available for this request (using API Key only)');
-      }
-      console.log('>>> Request Headers:', JSON.stringify(headers, null, 2));
-      return await axios.post(`${REQUESTOR_BASE_URL}/request`, body, { headers });
+        'Authorization': `Bearer ${token}`
     };
-
-    let r;
-    try {
-      // First attempt with current token (if any) and API key
-      r = await sendRequest(backendJwtToken);
-      
-      // Check for token upgrade in successful response
-      if (r.data && r.data.access_token) {
-        console.log('<<< New JWT token received in response. Updating stored token.');
-        backendJwtToken = r.data.access_token;
-      } else {
-        console.log('<<< No new JWT token in response.');
-      }
-      
-    } catch (err) {
-      // If error is 401 (Unauthorized) and we had a token, try one more time without the token (using API key)
-      if (err.response && err.response.status === 401 && backendJwtToken) {
-        console.log('401 Unauthorized received. Token might be expired. Retrying with API Key...');
-        backendJwtToken = null; // Clear invalid token
-        try {
-           r = await sendRequest(null);
-           // If successful, update token if new one provided
-           if (r.data && r.data.access_token) {
-             console.log('Retry successful. New JWT token received.');
-             backendJwtToken = r.data.access_token;
-           }
-        } catch (retryErr) {
-           // If retry fails, throw the original error or the new one
-           console.error('Retry failed:', retryErr.message);
-           throw retryErr;
-        }
-      } else {
-        // Not a 401 or no token usage, just throw
-        // Check if we might have received a token in the error response (edge case)
-        if (err.response && err.response.data && err.response.data.access_token) {
-             console.log('JWT token found in error response (unusual but handled).');
-             backendJwtToken = err.response.data.access_token;
-        }
-        throw err;
-      }
+    
+    if (apiKey) {
+        headers['X-API-Key'] = apiKey;
     }
+
+    console.log('>>> Request Headers:', JSON.stringify(headers, null, 2));
+    
+    const r = await axios.post(`${REQUESTOR_BASE_URL}/request`, body, { headers });
 
     console.log('Success Response:', r.data);
     
     res.render('new_request', { errors: null, result: r.data, form: req.body });
   } catch (err) {
     console.error('Error encountered:', err.message);
+    // If 401, redirect to login might be appropriate, or just show error
+    if (err.response && err.response.status === 401) {
+         // Clear cookie and render error asking to login
+         res.clearCookie('token');
+         return res.render('new_request', { errors: "Session expired. Please sign in again.", result: null, form: req.body });
+    }
+    
     if (err.response) {
       console.error('Error Response Data:', JSON.stringify(err.response.data, null, 2));
     }
