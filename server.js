@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 3000;
 // change this to your deployed FastAPI requestor base URL
 const REQUESTOR_BASE_URL = process.env.REQUESTOR_BASE_URL || 'http://localhost:8000';
 const API_KEY = process.env.API_KEY;
+const APP_ID = process.env.APP_ID;
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -47,14 +48,24 @@ app.post('/signin', async (req, res) => {
         const { username, password, apiKey } = req.body;
         
         console.log(`Authenticating user: ${username}`);
+        console.log(`Using APP_ID: '${APP_ID}'`);
+        console.log(`Using API_KEY: '${apiKey || API_KEY}'`);
         
-        const r = await axios.post(`${REQUESTOR_BASE_URL}/auth`, { 
+        const payload = { 
             username, 
             password, 
-            apiKey: apiKey || API_KEY
+            api_key: apiKey || API_KEY,
+            app_id: APP_ID
+        };
+        console.log('Sending payload:', JSON.stringify(payload, null, 2));
+
+        const r = await axios.post(`${REQUESTOR_BASE_URL}/auth`, payload, {
+            headers: {
+                'x-api-key': apiKey || API_KEY
+            }
         });
         
-        const token = r.data.access_token;
+        const token = r.data.access_token || r.data.jwt_token;
         console.log('Authentication successful, token received');
         
         // Store token in HTTP-only cookie
@@ -97,7 +108,7 @@ app.post('/request', requireAuth, async (req, res) => {
     const body = {
       Application: req.body.Application,
       Recipient: req.body.Recipient,
-      Subject: req.body.Subject || null,
+      Subject: req.body.Subject || "No Subject", // Ensure string for AWS SES validation
       Message: req.body.Message,
       OutputType: req.body.OutputType,
       Date: req.body.Date || null,
@@ -120,15 +131,18 @@ app.post('/request', requireAuth, async (req, res) => {
     console.log('Converted Payload:', JSON.stringify(body, null, 2));
 
     const apiKey = req.body.ApiKey || API_KEY;
-    const token = req.cookies.token; // Get token from cookie
+    // const token = req.cookies.token; // User token is proving invalid for this endpoint
 
     const headers = {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        // 'Authorization': `Bearer ${token}` // Removing invalid user token, relying on API Key
     };
     
     if (apiKey) {
         headers['X-API-Key'] = apiKey;
+    } else {
+        // Ensure API Key is always present if possible, or handle error
+        console.warn('Warning: No API Key available for request');
     }
 
     console.log('>>> Request Headers:', JSON.stringify(headers, null, 2));

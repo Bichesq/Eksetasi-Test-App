@@ -1,6 +1,10 @@
 <%- include('partials/header', { title: 'Create Notification' }) %>
 
-  <h2>Create Notification</h2>
+<div class="card">
+  <div style="text-align: center; margin-bottom: 2rem;">
+    <h2>Create Notification</h2>
+    <p>Fill in the details below to schedule a notification.</p>
+  </div>
 
   <% if (errors) { %>
     <div class="alert alert-error">
@@ -18,29 +22,28 @@
 
   <form method="POST" action="/request">
 
-
-    <div>
-      <label for="Application">Application</label>
+    <div class="form-group">
+      <label for="Application">Application Name</label>
       <input type="text" id="Application" name="Application" value="<%= form.Application || '' %>" required placeholder="e.g. MyService" />
     </div>
 
-    <div>
-      <label for="Recipient">Recipient</label>
+    <div class="form-group">
+      <label for="Recipient">Recipient ID</label>
       <input type="text" id="Recipient" name="Recipient" value="<%= form.Recipient || '' %>" required placeholder="User ID or Name" />
     </div>
 
-    <div>
-      <label for="Subject">Subject</label>
+    <div class="form-group">
+      <label for="Subject">Subject (Optional)</label>
       <input type="text" id="Subject" name="Subject" value="<%= form.Subject || '' %>" placeholder="Notification Subject" />
     </div>
 
-    <div>
+    <div class="form-group">
       <label for="Message">Message</label>
       <textarea id="Message" name="Message" required placeholder="Enter your message here..."><%= form.Message || '' %></textarea>
     </div>
 
-    <div>
-      <label for="OutputType">Output Type</label>
+    <div class="form-group">
+      <label for="OutputType">Output Channel</label>
       <select id="OutputType" name="OutputType" required>
         <option value="SMS" <%= form.OutputType === 'SMS' ? 'selected' : '' %>>SMS</option>
         <option value="EMAIL" <%= form.OutputType === 'EMAIL' ? 'selected' : '' %>>EMAIL</option>
@@ -48,60 +51,51 @@
       </select>
     </div>
 
-    <div class="form-section">
+    <!-- Scheduling Section -->
+    <div class="card" style="background-color: #F8F9FA; padding: 20px; box-shadow: none; border: 1px solid #eee;">
       <div class="checkbox-field" style="margin-bottom: 1rem;">
          <input type="checkbox" id="ScheduleNotification" name="ScheduleNotification" onchange="toggleScheduling()" />
-         <label for="ScheduleNotification"><strong>Schedule Notification</strong></label>
+         <label for="ScheduleNotification"><strong>Schedule Later?</strong></label>
       </div>
 
       <div id="SchedulingSection" style="display: none;">
-          <h3>Scheduling Details</h3>
-          <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-            <div style="flex: 1;">
-              <label for="Date">Date</label>
+          <h4 style="margin-top: 1rem;">Date & Time</h4>
+          <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 140px;">
               <input type="date" id="Date" name="Date" value="<%= form.Date || '' %>" />
             </div>
-            <div style="flex: 1;">
-              <label for="Time">Time</label>
+            <div style="flex: 1; min-width: 140px;">
               <input type="time" id="Time" name="Time" value="<%= form.Time || '' %>" />
             </div>
           </div>
         
-          <h3>Interval</h3>
-          <div class="checkbox-field" style="margin-bottom: 1rem;">
+          <h4>Recurrence</h4>
+          <div class="checkbox-field" style="margin-bottom: 1.5rem;">
             <input type="checkbox" id="Once" name="Once" <%= form.Once ? 'checked' : '' %> />
             <label for="Once">One-time only</label>
           </div>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
             <div>
-              <label for="Days">Days (1–31)</label>
-              <select id="Days" name="Days" multiple>
+              <label for="Days">Days</label>
+              <select id="Days" name="Days" multiple size="3">
                 <% for (let i=1; i<=31; i++) { %>
                   <option value="<%= i %>"><%= i %></option>
                 <% } %>
               </select>
             </div>
             <div>
-              <label for="Weeks">Weeks (1–52)</label>
-              <select id="Weeks" name="Weeks" multiple>
+              <label for="Weeks">Weeks</label>
+              <select id="Weeks" name="Weeks" multiple size="3">
                 <% for (let i=1; i<=52; i++) { %>
                   <option value="<%= i %>"><%= i %></option>
                 <% } %>
               </select>
             </div>
             <div>
-              <label for="Months">Months (1–12)</label>
-              <select id="Months" name="Months" multiple>
+              <label for="Months">Months</label>
+              <select id="Months" name="Months" multiple size="3">
                 <% for (let i=1; i<=12; i++) { %>
-                  <option value="<%= i %>"><%= i %></option>
-                <% } %>
-              </select>
-            </div>
-            <div>
-              <label for="Years">Years (1970–2100)</label>
-              <select id="Years" name="Years" multiple>
-                <% for (let i=1970; i<=2100; i++) { %>
                   <option value="<%= i %>"><%= i %></option>
                 <% } %>
               </select>
@@ -110,27 +104,31 @@
       </div>
     </div>
 
-    <div class="form-section">
-      <h3>Delivery Target</h3>
+    <!-- Delivery Target Section -->
+    <div class="form-group" style="margin-top: 2rem;">
+      <h3 style="margin-bottom: 1rem;">Delivery Details</h3>
 
       <div id="SMSFields" class="delivery-field" style="display:none;">
-        <label for="PhoneNumber">Phone Number (for SMS)</label>
+        <label for="PhoneNumber">Phone Number</label>
         <input type="text" id="PhoneNumber" name="PhoneNumber" value="<%= form.PhoneNumber || '' %>" placeholder="+1234567890" />
       </div>
 
       <div id="EMAILFields" class="delivery-field" style="display:none;">
-        <label for="EmailAddresses">Email Addresses (comma separated)</label>
+        <label for="EmailAddresses">Email Addresses</label>
         <input type="text" id="EmailAddresses" name="EmailAddresses" value="<%= form.EmailAddresses || '' %>" placeholder="user@example.com, other@example.com" />
       </div>
 
       <div id="PUSHFields" class="delivery-field" style="display:none;">
-        <label for="PushToken">Push Token (for PUSH)</label>
+        <label for="PushToken">Push Token</label>
         <input type="text" id="PushToken" name="PushToken" value="<%= form.PushToken || '' %>" />
       </div>
     </div>
 
-    <button type="submit">Send Notification</button>
+    <button type="submit" style="margin-top: 2rem;">
+        Send Notification <span>&rarr;</span>
+    </button>
   </form>
+</div>
 
 <script>
     function toggleScheduling() {
