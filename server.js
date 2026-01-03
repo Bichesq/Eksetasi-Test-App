@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 // change this to your deployed FastAPI requestor base URL
 const REQUESTOR_BASE_URL = process.env.REQUESTOR_BASE_URL || 'http://localhost:8000';
 const API_KEY = process.env.API_KEY;
-const APP_ID = process.env.APP_ID;
+// APP_ID is now automatically retrieved from authentication response
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -48,14 +48,13 @@ app.post('/signin', async (req, res) => {
         const { username, password, apiKey } = req.body;
         
         console.log(`Authenticating user: ${username}`);
-        console.log(`Using APP_ID: '${APP_ID}'`);
         console.log(`Using API_KEY: '${apiKey || API_KEY}'`);
         
+        // No longer sending app_id - it will be derived from the API key
         const payload = { 
             username, 
             password, 
-            api_key: apiKey || API_KEY,
-            app_id: APP_ID
+            api_key: apiKey || API_KEY
         };
         console.log('Sending payload:', JSON.stringify(payload, null, 2));
 
@@ -66,11 +65,31 @@ app.post('/signin', async (req, res) => {
         });
         
         const token = r.data.access_token || r.data.jwt_token;
-        console.log('Authentication successful, token received');
+        const appId = r.data.app_id;
+        const appName = r.data.app_name;
+        
+        console.log('Authentication successful!');
+        console.log(`  Token received: ${token.substring(0, 20)}...`);
+        console.log(`  App ID: ${appId}`);
+        console.log(`  App Name: ${appName}`);
         
         // Store token in HTTP-only cookie
         res.cookie('token', token, { 
             httpOnly: true, 
+            maxAge: 3600000,
+            secure: process.env.NODE_ENV === 'production'
+        });
+        
+        // Store app_id in cookie (can be non-httpOnly since it's not sensitive)
+        res.cookie('app_id', appId, { 
+            httpOnly: false,
+            maxAge: 3600000,
+            secure: process.env.NODE_ENV === 'production'
+        });
+        
+        // Store app_name for display purposes
+        res.cookie('app_name', appName, { 
+            httpOnly: false,
             maxAge: 3600000,
             secure: process.env.NODE_ENV === 'production'
         });
@@ -131,11 +150,11 @@ app.post('/request', requireAuth, async (req, res) => {
     console.log('Converted Payload:', JSON.stringify(body, null, 2));
 
     const apiKey = req.body.ApiKey || API_KEY;
-    // const token = req.cookies.token; // User token is proving invalid for this endpoint
+    const token = req.cookies.token;
 
     const headers = {
         'Content-Type': 'application/json',
-        // 'Authorization': `Bearer ${token}` // Removing invalid user token, relying on API Key
+        'Authorization': `Bearer ${token}`
     };
     
     if (apiKey) {
@@ -156,8 +175,10 @@ app.post('/request', requireAuth, async (req, res) => {
     console.error('Error encountered:', err.message);
     // If 401, redirect to login might be appropriate, or just show error
     if (err.response && err.response.status === 401) {
-         // Clear cookie and render error asking to login
+         // Clear all auth cookies and render error asking to login
          res.clearCookie('token');
+         res.clearCookie('app_id');
+         res.clearCookie('app_name');
          return res.render('new_request', { errors: "Session expired. Please sign in again.", result: null, form: req.body });
     }
     
