@@ -45,9 +45,7 @@
     <div class="form-group">
       <label for="OutputType">Output Channel</label>
       <select id="OutputType" name="OutputType" required>
-        <option value="SMS" <%= form.OutputType === 'SMS' ? 'selected' : '' %>>SMS</option>
-        <option value="EMAIL" <%= form.OutputType === 'EMAIL' ? 'selected' : '' %>>EMAIL</option>
-        <option value="PUSH" <%= form.OutputType === 'PUSH' ? 'selected' : '' %>>PUSH</option>
+        <option value="EMAIL" selected>EMAIL</option>
       </select>
     </div>
 
@@ -108,19 +106,9 @@
     <div class="form-group" style="margin-top: 2rem;">
       <h3 style="margin-bottom: 1rem;">Delivery Details</h3>
 
-      <div id="SMSFields" class="delivery-field" style="display:none;">
-        <label for="PhoneNumber">Phone Number</label>
-        <input type="text" id="PhoneNumber" name="PhoneNumber" value="<%= form.PhoneNumber || '' %>" placeholder="+1234567890" />
-      </div>
-
-      <div id="EMAILFields" class="delivery-field" style="display:none;">
+      <div id="EMAILFields" class="delivery-field">
         <label for="EmailAddresses">Email Addresses</label>
-        <input type="text" id="EmailAddresses" name="EmailAddresses" value="<%= form.EmailAddresses || '' %>" placeholder="user@example.com, other@example.com" />
-      </div>
-
-      <div id="PUSHFields" class="delivery-field" style="display:none;">
-        <label for="PushToken">Push Token</label>
-        <input type="text" id="PushToken" name="PushToken" value="<%= form.PushToken || '' %>" />
+        <input type="text" id="EmailAddresses" name="EmailAddresses" value="<%= form.EmailAddresses || '' %>" required placeholder="user@example.com, other@example.com" />
       </div>
     </div>
 
@@ -135,33 +123,6 @@
         const isChecked = document.getElementById('ScheduleNotification').checked;
         document.getElementById('SchedulingSection').style.display = isChecked ? 'block' : 'none';
     }
-
-    function updateDeliveryFields() {
-        const outputType = document.getElementById('OutputType').value;
-        
-        // Hide all first
-        document.querySelectorAll('.delivery-field').forEach(el => el.style.display = 'none');
-        document.getElementById('PhoneNumber').required = false;
-        document.getElementById('EmailAddresses').required = false;
-        document.getElementById('PushToken').required = false;
-
-        if (outputType === 'SMS') {
-            document.getElementById('SMSFields').style.display = 'block';
-            document.getElementById('PhoneNumber').required = true;
-        } else if (outputType === 'EMAIL') {
-            document.getElementById('EMAILFields').style.display = 'block';
-            document.getElementById('EmailAddresses').required = true;
-        } else if (outputType === 'PUSH') {
-            document.getElementById('PUSHFields').style.display = 'block';
-            document.getElementById('PushToken').required = true;
-        }
-    }
-
-    // Attach listener
-    document.getElementById('OutputType').addEventListener('change', updateDeliveryFields);
-
-    // Initial run
-    updateDeliveryFields();
 </script>
 
 <%- include('partials/footer') %>
